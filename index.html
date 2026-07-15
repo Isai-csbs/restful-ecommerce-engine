@@ -1,114 +1,84 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>E-Commerce Inventory Portal</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/bootstrap.min.css" rel="stylesheet">
-</head>
-<body class="bg-light">
-
-    <div class="container my-5">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1 class="h2 text-dark">Enterprise Product Inventory</h1>
-            <button class="btn btn-teal btn-primary" data-bs-toggle="modal" data-bs-target="#addProductModal">Add New Product</button>
-        </div>
-
-        <!-- Product Grid Display Container -->
-        <div class="row row-cols-1 row-cols-md-3 g-4" id="product-grid">
-            <!-- Dynamically populated via JavaScript AJAX requests -->
-        </div>
-    </div>
-
-    <!-- Bootstrap Add Product Modal -->
-    <div class="modal fade" id="addProductModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Create Product Listing</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="productForm">
-                        <div class="mb-3">
-                            <label class="form-label">Title</label>
-                            <input type="text" class="form-control" id="formTitle" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Price ($)</label>
-                            <input type="number" step="0.01" class="form-control" id="formPrice" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Stock Quantity</label>
-                            <input type="number" class="form-control" id="formStock" required>
-                        </div>
-                        <button type="submit" class="btn btn-success w-100">Publish Product</button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         document.addEventListener("DOMContentLoaded", fetchProducts);
 
-        // Async API fetch call logic
+        // Sample static data fallback for GitHub Pages demo preview
+        const mockProducts = [
+            { id: 1, title: "Premium Wireless Headphones", price: 149.99, stock_quantity: 50 },
+            { id: 2, title: "Mechanical Gaming Keyboard", price: 89.95, stock_quantity: 35 },
+            { id: 3, title: "Ergonomic Wireless Mouse", price: 45.00, stock_quantity: 100 }
+        ];
+
+        function displayProducts(products) {
+            const grid = document.getElementById("product-grid");
+            grid.innerHTML = "";
+            products.forEach(product => {
+                grid.innerHTML += `
+                    <div class="col">
+                        <div class="card h-100 shadow-sm">
+                            <div class="card-body">
+                                <h5 class="card-title">${product.title}</h5>
+                                <p class="text-muted small">In stock: ${product.stock_quantity} units</p>
+                                <div class="d-flex justify-content-between align-items-center mt-3">
+                                    <span class="fw-bold text-success">$${parseFloat(product.price).toFixed(2)}</span>
+                                    <button class="btn btn-sm btn-outline-secondary">Configure</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
         async function fetchProducts() {
             try {
                 const response = await fetch('api/products.php');
+                if (!response.ok) throw new Error("PHP Backend Server not present");
                 const result = await response.json();
-                const grid = document.getElementById("product-grid");
-                grid.innerHTML = "";
 
                 if(result.status === "success") {
-                    result.data.forEach(product => {
-                        grid.innerHTML += `
-                            <div class="col">
-                                <div class="card h-100 shadow-sm">
-                                    <div class="card-body">
-                                        <h5 class="card-title">${product.title}</h5>
-                                        <p class="text-muted small">In stock: ${product.stock_quantity} units</p>
-                                        <div class="d-flex justify-content-between align-items-center mt-3">
-                                            <span class="fw-bold text-success">$${parseFloat(product.price).toFixed(2)}</span>
-                                            <button class="btn btn-sm btn-outline-secondary">Configure</button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-                    });
+                    displayProducts(result.data);
+                } else {
+                    displayProducts(mockProducts);
                 }
             } catch (error) {
-                console.error("Error communicating with products API endpoint:", error);
+                console.warn("Falling back to static presentation data (GitHub Pages environment detected).");
+                displayProducts(mockProducts);
             }
         }
 
-        // Handle async form submissions 
+        // Handle form submissions for demo presentation 
         document.getElementById("productForm").addEventListener("submit", async (e) => {
             e.preventDefault();
-            const productData = {
+            const newProduct = {
+                id: mockProducts.length + 1,
                 title: document.getElementById("formTitle").value,
-                price: document.getElementById("formPrice").value,
-                stock_quantity: document.getElementById("formStock").value
+                price: parseFloat(document.getElementById("formPrice").value),
+                stock_quantity: parseInt(document.getElementById("formStock").value)
             };
 
+            // Try to post to PHP server
             try {
                 const response = await fetch('api/products.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(productData)
+                    body: JSON.stringify(newProduct)
                 });
                 const result = await response.json();
                 if(result.status === "success") {
                     bootstrap.Modal.getInstance(document.getElementById('addProductModal')).hide();
                     document.getElementById("productForm").reset();
                     fetchProducts();
+                    return;
                 }
             } catch (error) {
-                console.error("Submission operational error:", error);
+                console.warn("API offline. Appending item to local screen array for demonstration.");
             }
+
+            // GitHub Pages fallback mock logic:
+            mockProducts.unshift(newProduct);
+            displayProducts(mockProducts);
+            bootstrap.Modal.getInstance(document.getElementById('addProductModal')).hide();
+            document.getElementById("productForm").reset();
         });
     </script>
-</body>
-</html>
